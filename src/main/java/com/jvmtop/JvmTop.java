@@ -24,6 +24,8 @@ import java.lang.Thread.State;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
 import java.util.HashMap;
+import java.util.Map.Entry;
+
 import com.jvmtop.monitor.VMInfo;
 import com.jvmtop.openjdk.tools.LocalVirtualMachine;
 /*
@@ -56,30 +58,34 @@ public class JvmTop
             for (ThreadInfo ti : bean.dumpAllThreads(false, false))
             {
                 if (ti.getStackTrace().length > 0 && ti.getThreadState() == State.RUNNABLE) {
-                    StackTraceElement parent = null;
-                    for (StackTraceElement e : ti.getStackTrace()) {
-                        if(isFiltered(e)) {
+                    StackTraceElement child = null;
+                    for (StackTraceElement parent : ti.getStackTrace()) {
+                        if(isFiltered(parent)) {
                             break;
                         }
-                        if(parent == null) { 
-                            parent = e;
+                        if(child == null) { 
+                            child = parent;
                             continue; 
                         }
-                        String key = parent.getClassName() + "." + parent.getMethodName() + "():" + parent.getLineNumber() + " ===> "+ e.getClassName() + "." + e.getMethodName();
+                        String key = parent.getClassName() + "." + parent.getMethodName() + "():" + parent.getLineNumber() + " ===> "+ child.getClassName() + "." + child.getMethodName();
                         if(hits.containsKey(key)) {
                             hits.put(key, hits.get(key) + 1);
                         } else {
                             hits.put(key, 1L);
                         }
-                        parent = e;
+                        child = parent;
                     }
                 }
             }
-            totalSamples++;            
-            Thread.sleep(delayMillis);
+            totalSamples++;         
+            if(delayMillis > 0) {
+              Thread.sleep(delayMillis);
+            }
+        }
+        for(Entry<String, Long> e : hits.entrySet()) {
+            System.out.println(e.getValue()+":"+e.getKey());
         }
         System.out.println(String.format("Total Samples: %d", totalSamples));
-        System.out.println(hits.toString());
     }
 
     public JvmTop()
